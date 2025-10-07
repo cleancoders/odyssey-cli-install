@@ -9,13 +9,22 @@ source "${SCRIPT_DIR}/utils.sh"
 
 unset HAVE_SUDO_ACCESS # unset this from the environment
 
+# shellcheck disable=SC2120
 have_sudo_access() {
-  if [[ ! -x "/usr/bin/sudo" ]]
+  local -a SUDO=()
+
+  if [[ $# -gt 0 ]];
+  then
+    SUDO=("$1")
+  else
+    SUDO=("/usr/bin/sudo")
+  fi
+
+  if [[ ! -x ${SUDO[0]} ]]
   then
     return 1
   fi
 
-  local -a SUDO=("/usr/bin/sudo")
   if [[ -n "${SUDO_ASKPASS-}" ]]
   then
     SUDO+=("-A")

@@ -3,8 +3,6 @@
 # Run all test files in the test directory
 # This script discovers and executes all test_*.sh files
 
-set -e
-
 # Get the test directory
 TEST_DIR=$(dirname "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")
 
@@ -43,10 +41,8 @@ for test_file in "${TEST_DIR}"/test_*.sh; do
   temp_output=$(mktemp)
 
   # Run the test with live output, while also capturing to temp file
-  set +e
   "${test_file}" 2>&1 | tee "${temp_output}"
-  exit_code=$?
-  set -e
+  exit_code=${PIPESTATUS[0]}
 
   # Parse the captured output to count test cases (shunit2 uses ANSI codes)
   # Strip ANSI codes first, then match

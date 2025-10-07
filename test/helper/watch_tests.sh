@@ -78,7 +78,11 @@ run_tests_for_file() {
     echo -e "${BLUE}Running: ${YELLOW}${file_basename}${NC}"
     echo -e "${BLUE}========================================${NC}"
     echo ""
-    "${changed_file}"
+    if "${changed_file}"; then
+      echo -e "${GREEN}✓ Test passed${NC}"
+    else
+      echo -e "\033[0;31m✗ Test failed${NC}"
+    fi
   # If it's a source file in bin/ or lib/
   elif [[ "${changed_file}" == *"/bin/"*.sh ]] || [[ "${changed_file}" == *"/lib/"*.sh ]]; then
     echo -e "${BLUE}Change detected in: ${YELLOW}${file_basename}${NC}"
@@ -106,14 +110,14 @@ run_tests_for_file() {
       if [[ "${all_passed}" == true ]]; then
         echo -e "${GREEN}✓ All related tests passed${NC}"
       else
-        echo -e "${RED}✗ Some tests failed${NC}"
+        echo -e "\033[0;31m✗ Some tests failed${NC}"
       fi
     else
       # No related tests found, run all tests
       echo -e "${YELLOW}No related tests found, running all tests${NC}"
       echo -e "${BLUE}========================================${NC}"
       echo ""
-      "${TEST_DIR}/run_all_tests.sh"
+      "${TEST_DIR}/helper/run_all_tests.sh"
     fi
   else
     # For other changes, run all tests
@@ -121,7 +125,7 @@ run_tests_for_file() {
     echo -e "${BLUE}Running all tests${NC}"
     echo -e "${BLUE}========================================${NC}"
     echo ""
-    "${TEST_DIR}/run_all_tests.sh"
+    "${TEST_DIR}/helper/run_all_tests.sh"
   fi
 }
 

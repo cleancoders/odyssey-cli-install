@@ -8,6 +8,24 @@ To install the Odyssey CLI, open a terminal and run
 
 ## Development
 
+### Structure
+
+All script files that are executed directly are in `bin`. 
+
+`lib` is a directory of files containing helper and utility functions that are imported and used by files in `bin`.
+
+`bin/install.sh` is the source file for the installer file that gets built a distributed to users. 
+
+The actual built file that gets distributed to users is put in the top level of the project and is built with 
+`make build-install`
+
+All new files created must have executable permissions. To set, use:
+```bash
+chmod +x path_to_my_new_file.sh
+```
+
+### Testing
+
 Running all tests in `test` directory: 
 
 ```bash 
@@ -19,12 +37,7 @@ Running all tests and auto re-run on save (requires `fswatch` on Mac and `inotif
 make test-watch
 ```
 
-All new files created must have executable permissions. To set, use: 
-```bash
-chmod +x path_to_my_new_file.sh
-```
-
-### Creating a new test file
+#### Creating a new test file
 ```bash
 make test-file FILE=bin/my_file.sh
 ```

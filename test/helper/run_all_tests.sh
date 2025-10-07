@@ -6,7 +6,7 @@
 set -e
 
 # Get the test directory
-TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TEST_DIR=$(dirname "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")
 
 # Color codes for output
 RED='\033[0;31m'

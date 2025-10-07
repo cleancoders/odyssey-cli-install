@@ -4,8 +4,8 @@
 # This script watches for changes in bin/, lib/, and test/ directories
 
 # Get the project root directory
-TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "${TEST_DIR}")"
+TEST_DIR="$(dirname "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)")"
+PROJECT_DIR=$(dirname "${TEST_DIR}")
 
 # Color codes
 GREEN='\033[0;32m'
@@ -37,7 +37,7 @@ echo ""
 # Run tests once at startup
 echo -e "${GREEN}Running initial tests...${NC}"
 echo ""
-"${TEST_DIR}/run_all_tests.sh"
+"${TEST_DIR}/helper/run_all_tests.sh"
 
 # Function to find test files that reference a given source file
 find_related_tests() {

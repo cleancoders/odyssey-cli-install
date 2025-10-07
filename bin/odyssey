@@ -1,0 +1,97 @@
+#!/usr/bin/env bb
+(ns odyssey-cli.os)
+
+(defn -os-name [] (System/getProperty "os.name"))
+(defn os-name [] (-> (-os-name) .toLowerCase))
+(defn windows? [] (re-find #"windows" (os-name)))
+(defn mac? [] (re-find #"mac" (os-name)))
+(defn linux? [] (re-find #"linux" (os-name)))
+(defn mac-or-linux? [] (or (mac?) (linux?)))
+
+
+(ns odyssey-cli.config
+  (:require [babashka.fs :as fs]
+            [odyssey-cli.os :as os]))
+
+(defn -xdg-config-home [] (System/getenv "XDG_CONFIG_HOME"))
+(defn -app-data [] (System/getenv "APPDATA"))
+(defn -local-app-data [] (System/getenv "LOCALAPPDATA"))
+
+(defn unix-config-path [app-name]
+  (fs/path
+   (or (-xdg-config-home)
+       (fs/path (fs/home) ".config"))
+   app-name))
+
+(defn windows-config-path [app-name]
+  (fs/path
+   (or (-app-data)
+       (-local-app-data)
+       (fs/path (fs/home) "AppData" "Roaming"))
+   app-name))
+
+(defn get-config-parent-path [app-name]
+  (if (os/mac-or-linux?)
+    (unix-config-path app-name)
+    (windows-config-path app-name)))
+
+(def config-parent (get-config-parent-path "odyssey"))
+(def config-file (fs/file config-parent "config.edn"))
+
+(defn add-run-cmd [config]
+  (println "What is the command to run your application?")
+  (merge config {:cmd (read-line)}))
+
+(defn exists? []
+  (fs/exists? config-file))
+
+(defn ensure-config-path! []
+  (fs/create-dirs config-parent))
+
+(defn write! [config]
+  (ensure-config-path!)
+  (spit config-file config))
+
+(defn read-config
+  ([] (read-config (slurp config-file)))
+  ([config] config))
+
+(defn get-run-cmd [] (:cmd (read-config)))
+
+(defn build []
+  (-> {} add-run-cmd))
+
+(defn setup! [] (-> (build) write!))
+(ns odyssey-cli.main
+  (:require [clojure.tools.cli :as cli]
+            [odyssey-cli.config :as config]))
+
+(def version "0.0.1")
+(def cli-options
+  [["-c" "--config" "run config setup and exit"]
+   ["-h" "--help" "print this help message and exit"]
+   ["-v" "--version" "print version number and exit"]])
+
+(defn -system-exit [code] (System/exit code))
+
+(defn render-help! [{:keys [summary]}]
+  (println "Usage: odyssey [options]\n")
+  (println summary)
+  (-system-exit 0))
+
+(defn render-version! []
+  (println "Odyssey-cli-version: " version)
+  (-system-exit 0))
+
+(defn config-and-exit! []
+  (config/setup!)
+  (-system-exit 0))
+
+(defn -main [& args]
+  (let [{:keys [options] :as args} (cli/parse-opts args cli-options)]
+    (cond
+      (:help options) (render-help! args)
+      (:config options) (config-and-exit!)
+      (:version options) (render-version!)
+      :else (when-not (config/exists?) (config/setup!)))))
+(ns user (:require [odyssey-cli.main])) (apply odyssey-cli.main/-main *command-line-args*)

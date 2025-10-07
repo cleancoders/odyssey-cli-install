@@ -3,7 +3,7 @@
 To install the Odyssey CLI, open a terminal and run
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/cleancoders/odyssey-cli-install/refs/heads/master/install.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/cleancoders/odyssey-cli-install/refs/heads/production/install.sh)"
 ```
 
 ## Development

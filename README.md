@@ -14,6 +14,11 @@ Running all tests in `test` directory:
 make test
 ```
 
+Running all tests and auto re-run on save (requires `fswatch` on Mac and `inotifywait` on Linux):
+```bash
+make test-watch
+```
+
 ## Deployment 
 
 Build the distributable installer file: 

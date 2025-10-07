@@ -2,14 +2,32 @@
 
 # Build script to create a single distributable install.sh
 # This concatenates all library files into the main install script
+#
+# Usage: build_installer.sh [output_directory]
+#   output_directory: Optional. Directory where install.sh will be created.
+#                     Defaults to project root.
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR=$(dirname "${SCRIPT_DIR}")
-OUTPUT_FILE="${PROJECT_DIR}/install.sh"
+
+# Parse arguments
+if [[ $# -gt 0 ]]; then
+  OUTPUT_DIR="$1"
+  # Resolve to absolute path
+  OUTPUT_DIR="$(cd "${OUTPUT_DIR}" 2>/dev/null && pwd)" || {
+    echo "Error: Output directory '${1}' does not exist" >&2
+    exit 1
+  }
+else
+  OUTPUT_DIR="${PROJECT_DIR}"
+fi
+
+OUTPUT_FILE="${OUTPUT_DIR}/install.sh"
 
 echo "Building distributable install.sh..."
+echo "Output: ${OUTPUT_FILE}"
 
 # Start with the shebang and initial comments from the source
 {

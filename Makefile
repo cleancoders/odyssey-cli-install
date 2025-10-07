@@ -12,11 +12,7 @@ help: ## Show this help message
 test: ## Run all tests
 	@./test/run_all_tests.sh
 
-build: ## Build the distributable install.sh
+build-install: ## Build the distributable install.sh
 	@./bin/build_installer.sh
 
-clean: ## Remove generated files
-	@rm -f install.sh
-	@echo "Cleaned generated files"
-
-all: clean build test ## Clean, build, and test
+all: build-install test ## Clean, build, and test

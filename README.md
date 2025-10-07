@@ -3,19 +3,27 @@
 To install the Odyssey CLI, open a terminal and run
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/cleancoders/odyssey-cli/refs/heads/master/bin/install.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/cleancoders/odyssey-cli-install/refs/heads/master/install.sh)"
 ```
 
 ## Development
 
-You will need the ShUnit2 testing framework installed. For Mac with Homebrew, run 
+Running all tests in `test` directory: 
 
-```bash
-brew install shunit2
+```bash 
+make test
 ```
 
-For Debian/Ubuntu, run 
+## Deployment 
+
+Build the distributable installer file: 
 
 ```bash
-sudo apt-get install shunit2
+make build-install
+```
+
+Build installer and run all tests: 
+
+```bash
+make all
 ```

@@ -1,4 +1,4 @@
-.PHONY: test test-watch test-file build-install all clean help
+.PHONY: test test-watch test-file build-install all help
 
 # Default target
 .DEFAULT_GOAL := help
@@ -14,10 +14,10 @@ help: ## Show this help message
 	@echo '  make test-file FILE=bin/build_installer.sh'
 
 test: ## Run all tests
-	@./test/run_all_tests.sh
+	@./test/helper/run_all_tests.sh
 
 test-watch: ## Watch for changes and re-run tests automatically
-	@./test/watch_tests.sh
+	@./test/helper/watch_tests.sh
 
 test-file: ## Create a test file for a source file (use FILE=path/to/file.sh)
 	@if [ -z "$(FILE)" ]; then \
@@ -25,13 +25,9 @@ test-file: ## Create a test file for a source file (use FILE=path/to/file.sh)
 		echo "Usage: make test-file FILE=lib/utils.sh"; \
 		exit 1; \
 	fi
-	@./bin/create_test.sh $(FILE)
+	@./test/helper/create_test.sh $(FILE)
 
 build-install: ## Build the distributable install.sh
 	@./bin/build_installer.sh
 
 all: build-install test ## Build and test
-
-clean: ## Remove generated files
-	@rm -f install.sh
-	@echo "Cleaned generated files"

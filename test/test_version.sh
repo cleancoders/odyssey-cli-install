@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Unit tests for bin/file_permissions.sh
+# Unit tests for lib/version.sh
 
 # Get the project root directory
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -11,7 +11,7 @@ SHUNIT2="${PROJECT_DIR}/shunit2"
 
 # Source the file under test
 # shellcheck disable=SC1090
-source "${PROJECT_DIR}/lib/file_permissions.sh"
+source "${PROJECT_DIR}/lib/version.sh"
 
 # Test fixtures
 TEST_OUTPUT_DIR=""

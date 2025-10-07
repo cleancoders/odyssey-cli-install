@@ -6,8 +6,8 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "${SCRIPT_DIR}")"
-TEST_DIR="${PROJECT_DIR}/test"
+TEST_DIR="$(dirname "${SCRIPT_DIR}")"
+PROJECT_DIR="$(dirname "${TEST_DIR}")"
 
 # Check if source file is provided
 if [[ $# -eq 0 ]]; then

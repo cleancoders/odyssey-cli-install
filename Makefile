@@ -12,7 +12,10 @@ help: ## Show this help message
 test: ## Run all tests
 	@./test/run_all_tests.sh
 
+test-watch: ## Watch for changes and re-run tests automatically
+	@./test/watch_tests.sh
+
 build-install: ## Build the distributable install.sh
 	@./bin/build_installer.sh
 
-all: build-install test ## Clean, build, and test
+all: build-install test ## Build and test

@@ -59,25 +59,6 @@ execute() {
   fi
 }
 
-retry() {
-  local tries="$1" n="$1" pause=2
-  shift
-  if ! "$@"
-  then
-    while [[ $((--n)) -gt 0 ]]
-    do
-      warn "$(printf "Trying again in %d seconds: %s" "${pause}" "$(shell_join "$@")")"
-      sleep "${pause}"
-      ((pause *= 2))
-      if "$@"
-      then
-        return
-      fi
-    done
-    abort "$(printf "Failed %d times doing: %s" "${tries}" "$(shell_join "$@")")"
-  fi
-}
-
 execute_sudo() {
   local -a args=("$@")
   if [[ "${EUID:-${UID}}" != "0" ]] && have_sudo_access

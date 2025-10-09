@@ -126,6 +126,27 @@ test_build_errors_on_nonexistent_directory() {
   local exit_code=$?
   assertNotEquals "Should exit with non-zero code for invalid directory" 0 "${exit_code}"
 }
+
+# Test that output file contains main function invocation
+test_output_contains_main_invocation() {
+  assertContains "Should contain main function call" "$(cat "${TEST_OUTPUT_DIR}/install.sh")" 'main "$@"'
+}
+
+# Test that main invocation is at the end of the file
+test_main_invocation_at_end() {
+  local last_line
+  last_line="$(tail -n 1 "${TEST_OUTPUT_DIR}/install.sh")"
+
+  assertEquals "Last line should be main invocation" 'main "$@"' "${last_line}"
+}
+
+# Test that output file can parse --help argument
+test_output_parses_help_argument() {
+  output=$("${TEST_OUTPUT_DIR}/install.sh" --help 2>&1 || true)
+
+  assertContains "Should display usage when called with --help" "${output}" "Usage:"
+}
+
 # Load and run shunit2
 # shellcheck disable=SC1090
 . "${SHUNIT2}"

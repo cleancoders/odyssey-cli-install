@@ -85,6 +85,13 @@ EOF
   tail -n +8 "${PROJECT_DIR}/bin/install.sh" | \
     sed '/^# Get the directory where the script is located/,/^source.*validation\.sh/d'
 
+  echo ""
+  echo "# ============================================================================"
+  echo "# Execute main function with all arguments"
+  echo "# ============================================================================"
+  echo ""
+  echo 'main "$@"'
+
 } > "${OUTPUT_FILE}"
 
 # Make the output file executable

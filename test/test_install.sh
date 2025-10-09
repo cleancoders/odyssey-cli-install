@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Unit tests for bin/install_refactored.sh
+# Unit tests for bin/install.sh
 
 # Get the project root directory
 TEST_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -8,45 +8,10 @@ PROJECT_DIR="$(dirname "${TEST_DIR}")"
 
 # Source shunit2
 SHUNIT2="${PROJECT_DIR}/shunit2"
-
-# oneTimeSetUp - runs once before all tests
-oneTimeSetUp() {
-  # Source the library files that install_refactored.sh depends on
-  # shellcheck disable=SC1091
-  source "${PROJECT_DIR}/lib/utils.sh"
-  # shellcheck disable=SC1091
-  source "${PROJECT_DIR}/lib/version.sh"
-  # shellcheck disable=SC1091
-  source "${PROJECT_DIR}/lib/file_permissions.sh"
-  # shellcheck disable=SC1091
-  source "${PROJECT_DIR}/lib/execution.sh"
-  # shellcheck disable=SC1091
-  source "${PROJECT_DIR}/lib/validation.sh"
-
-  # Extract functions from install_refactored.sh without running main
-  # Skip the first 23 lines (shebang, comments, set, SCRIPT_DIR setup, and source statements)
-  # and the last 2 lines (comment + main call)
-  sed -n '24,$p' "${PROJECT_DIR}/bin/install_refactored.sh" | sed '$d' | sed '$d' > /tmp/install_functions.sh
-  # shellcheck disable=SC1091
-  source /tmp/install_functions.sh
-  rm -f /tmp/install_functions.sh
-
-  # Set constants that are normally set in the script
-  # shellcheck disable=SC2034
-  MACOS_NEWEST_UNSUPPORTED="27.0"
-  # shellcheck disable=SC2034
-  MACOS_OLDEST_SUPPORTED="14.0"
-  # shellcheck disable=SC2034
-  REQUIRED_BB_VERSION=1.12.193
-  # shellcheck disable=SC2034
-  REQUIRED_CURL_VERSION=7.41.0
-  # shellcheck disable=SC2034
-  REQUIRED_GIT_VERSION=2.7.0
-}
+source "${PROJECT_DIR}/bin/install.sh"
 
 # Setup function - runs before each test
 setUp() {
-
   # Clear environment variables
   unset NONINTERACTIVE
   unset INTERACTIVE

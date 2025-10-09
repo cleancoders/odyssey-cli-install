@@ -245,18 +245,6 @@ should_install_command_line_tools() {
   fi
 }
 
-#no_usable_java() {
-#  [[ -z "$(find_tool java)" ]]
-#}
-#
-#if [[ -n "${ODYSSEY_ON_LINUX-}" ]] && no_usable_java
-#then
-# abort "Odyssey CLI requires Java ${REQUIRED_JAVA_VERSION} which was not found on your system.
-# Please install Java ${REQUIRED_JAVA_VERSION} and add its location to your PATH."
-#  else
-#    export ODYSSEY_FORCE_VENDOR_JAVA=1
-#fi
-
 # Invalidate sudo timestamp before exiting (if it wasn't active before).
 if [[ -x /usr/bin/sudo ]] && ! /usr/bin/sudo -n -v 2>/dev/null
 then
@@ -287,11 +275,6 @@ fi
 check_run_command_as_root
 
 # Get tty formatting variables from utils.sh
-tty_underline="$(tty_escape "4;39")"
-tty_blue="$(tty_mkbold 34)"
-tty_red="$(tty_mkbold 31)"
-tty_bold="$(tty_mkbold 39)"
-tty_reset="$(tty_escape 0)"
 
 if [[ -d "${ODYSSEY_PREFIX}" && ! -x "${ODYSSEY_PREFIX}" ]]
 then
@@ -646,68 +629,6 @@ ohai "Downloading and installing Odyssey CLI..."
   cd "${ODYSSEY_PREFIX}/bin" >/dev/null || exit 1
   execute_sudo "curl" "-LO" "http://127.0.0.1:8080/bin/odyssey"
   execute_sudo "${CHMOD[@]}" "+x" odyssey
-
-#  # we do it in four steps to avoid merge errors when reinstalling
-#  execute "${USABLE_GIT}" "-c" "init.defaultBranch=main" "init" "--quiet"
-#
-#  # "git remote add" will fail if the remote is defined in the global config
-#  execute "${USABLE_GIT}" "config" "remote.origin.url" "${ODYSSEY_GIT_REMOTE}"
-#  execute "${USABLE_GIT}" "config" "remote.origin.fetch" "+refs/heads/*:refs/remotes/origin/*"
-#  execute "${USABLE_GIT}" "config" "--bool" "fetch.prune" "true"
-#
-#  # ensure we don't munge line endings on checkout
-#  execute "${USABLE_GIT}" "config" "--bool" "core.autocrlf" "false"
-#
-#  # make sure symlinks are saved as-is
-#  execute "${USABLE_GIT}" "config" "--bool" "core.symlinks" "true"
-#
-#  if [[ -z "${NONINTERACTIVE-}" ]]
-#  then
-#    quiet_progress=("--quiet" "--progress")
-#  else
-#    quiet_progress=("--quiet")
-#  fi
-#  retry 5 "${USABLE_GIT}" "fetch" "${quiet_progress[@]}" "--force" "origin"
-#  retry 5 "${USABLE_GIT}" "fetch" "${quiet_progress[@]}" "--force" "--tags" "origin"
-#
-#  execute "${USABLE_GIT}" "remote" "set-head" "origin" "--auto" >/dev/null
-#
-#  LATEST_GIT_TAG="$("${USABLE_GIT}" -c "column.ui=never" tag --list --sort="-version:refname" | head -n1)"
-#  if [[ -z "${LATEST_GIT_TAG}" ]]
-#  then
-#    abort "Failed to query latest odyssey-cli Git tag."
-#  fi
-#  execute "${USABLE_GIT}" "checkout" "--quiet" "--force" "-B" "stable" "${LATEST_GIT_TAG}"
-#
-#  if [[ "${ODYSSEY_REPOSITORY}" != "${ODYSSEY_PREFIX}" ]]
-#  then
-#    if [[ "${ODYSSEY_REPOSITORY}" == "${ODYSSEY_PREFIX}/odyssey-cli" ]]
-#    then
-#      execute "ln" "-sf" "../odyssey/bin" "${ODYSSEY_PREFIX}/bin"
-#    else
-#      abort "The Odyssey repository should be placed in the Odyssey prefix directory."
-#    fi
-#  fi
-#
-#  if [[ -n "${ADD_PATHS_D-}" ]]
-#  then
-#    execute_sudo "${MKDIR[@]}" /etc/paths.d
-#    echo "${ODYSSEY_PREFIX}/bin" | execute_sudo tee /etc/paths.d/odyssey
-#    execute_sudo "${CHOWN[@]}" root:wheel /etc/paths.d/odyssey
-#    execute_sudo "${CHMOD[@]}" "a+r" /etc/paths.d/odyssey
-#  elif [[ ":${PATH}:" != *":${ODYSSEY_PREFIX}/bin:"* ]]
-#  then
-#    PATH_WARN=1
-#  fi
-#
-#  execute "${ODYSSEY_PREFIX}/bin" "update" "--force" "--quiet"
-#
-#  if [[ -n "${PATH_WARN-}" ]]
-#  then
-#    warn "${ODYSSEY_PREFIX}/bin is not in your PATH.
-#  Instructions on how to configure your shell for Odyssey
-#  can be found in the 'Next steps' section below."
-#  fi
 ) || exit 1
 
 ohai "Installation successful!"
@@ -715,28 +636,6 @@ echo
 
 ring_bell
 
-#if [[ -n "${ODYSSEY_ON_LINUX-}" ]]
-#then
-#  echo "- Install Odyssey's dependencies if you have sudo access:"
-#
-#  if [[ -x "$(command -v apt-get)" ]]
-#  then
-#    echo "    sudo apt-get install build-essential"
-#  elif [[ -x "$(command -v dnf)" ]]
-#  then
-#    echo "    sudo dnf group install development-tools"
-#  elif [[ -x "$(command -v yum)" ]]
-#  then
-#    echo "    sudo yum groupinstall 'Development Tools'"
-#  elif [[ -x "$(command -v pacman)" ]]
-#  then
-#    echo "    sudo pacman -S base-devel"
-#  elif [[ -x "$(command -v apk)" ]]
-#  then
-#    echo "    sudo apk add build-base"
-#  fi
-#fi
-
 cat <<EOS
-- Run ${tty_bold}clean-code config${tty_reset} to set your run command and get started!
+- Run ${tty_bold}odyssey config${tty_reset} to set your run command and get started!
 EOS

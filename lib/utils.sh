@@ -20,6 +20,10 @@ tty_blue="$(tty_mkbold 34)"
 tty_red="$(tty_mkbold 31)"
 tty_bold="$(tty_mkbold 39)"
 tty_reset="$(tty_escape 0)"
+export tty_underline
+export tty_blue
+export tty_red
+export tty_reset
 
 shell_join() {
   local arg

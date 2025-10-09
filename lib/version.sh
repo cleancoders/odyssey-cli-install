@@ -5,7 +5,12 @@
 major_minor() {
   echo "${1%%.*}.$(
     x="${1#*.}"
-    echo "${x%%.*}"
+    if [[ "${x}" == "$1" ]]
+    then
+      echo "0"
+    else
+     echo "${x%%.*}"
+    fi
   )"
 }
 

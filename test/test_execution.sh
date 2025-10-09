@@ -150,49 +150,6 @@ test_execute_passes_arguments_correctly() {
 }
 
 ############
-# retry
-############
-
-# shellcheck disable=SC2317
-# shellcheck disable=SC2155
-flaky_command() {
-  local count=$(cat "${counter_file}")
-  echo "$((count + 1))" > "${counter_file}"
-  [ "${count}" -ge 2 ]
-}
-
-test_retry_succeeds_on_first_try() {
-  local test_file="${TEST_OUTPUT_DIR}/retry_test.txt"
-  retry 3 touch "${test_file}"
-  assertTrue "should create file on first try" "[ -f '${test_file}' ]"
-}
-
-test_retry_succeeds_after_failures() {
-  local counter_file="${TEST_OUTPUT_DIR}/counter.txt"
-  echo "0" > "${counter_file}"
-  output=$(retry 3 flaky_command 2>&1)
-  assertEquals "should succeed after retries" 0 $?
-  assertEquals "should have tried 3 times" "3" "$(cat "${counter_file}")"
-}
-
-test_retry_aborts_after_max_tries() {
-  # Run in subshell to capture abort
-  output=$(retry 2 false 2>&1)
-  exit_code=$?
-  assertEquals "should exit 1 after max retries" 1 ${exit_code}
-  echo "$output" | grep "Failed 2 times doing: false" >/dev/null
-  assertEquals "should print failure message" 0 $?
-}
-
-test_retry_warns_on_retry() {
-  local counter_file="${TEST_OUTPUT_DIR}/counter.txt"
-  echo "0" > "${counter_file}"
-  output=$(retry 3 flaky_command 2>&1)
-  echo "$output" | grep "Trying again in 2 seconds: flaky_command" >/dev/null
-  assertEquals "should print warning on retry" 0 $?
-}
-
-############
 # execute_sudo
 ############
 

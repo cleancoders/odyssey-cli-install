@@ -1,26 +1,279 @@
 #!/bin/bash
 
+# Odyssey CLI Installer
+# This is a generated file. Do not edit directly.
+# Source files are in bin/install.sh and lib/
+
 # We don't need return codes for "$(command)", only stdout is needed.
 # Allow `[[ -n "$(command)" ]]`, `func "$(command)"`, pipes, etc.
 # shellcheck disable=SC2312
 
 set -u
 
-# Get the directory where the script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-LIB_DIR="$(cd "${SCRIPT_DIR}/../lib" && pwd)"
+# ============================================================================
+# Library Functions (from lib/)
+# ============================================================================
 
-# Source library files
-# shellcheck source=../lib/utils.sh
-source "${LIB_DIR}/utils.sh"
-# shellcheck source=../lib/version.sh
-source "${LIB_DIR}/version.sh"
-# shellcheck source=../lib/file_permissions.sh
-source "${LIB_DIR}/file_permissions.sh"
-# shellcheck source=../lib/execution.sh
-source "${LIB_DIR}/execution.sh"
-# shellcheck source=../lib/validation.sh
-source "${LIB_DIR}/validation.sh"
+# --- lib/utils.sh ---
+
+# Utility functions for Odyssey CLI installer
+
+abort() {
+  printf "%s\n" "$@" >&2
+  exit 1
+}
+
+# string formatters
+if [[ -t 1 ]]
+then
+  tty_escape() { printf "\033[%sm" "$1"; }
+else
+  tty_escape() { :; }
+fi
+tty_mkbold() { tty_escape "1;$1"; }
+tty_underline="$(tty_escape "4;39")"
+tty_blue="$(tty_mkbold 34)"
+tty_red="$(tty_mkbold 31)"
+tty_bold="$(tty_mkbold 39)"
+tty_reset="$(tty_escape 0)"
+export tty_underline
+export tty_blue
+export tty_red
+export tty_reset
+
+shell_join() {
+  local arg
+  printf "%s" "$1"
+  shift
+  for arg in "$@"
+  do
+    printf " "
+    printf "%s" "${arg// /\ }"
+  done
+}
+
+chomp() {
+  printf "%s" "${1/"$'\n'"/}"
+}
+
+ohai() {
+  printf "${tty_blue}==>${tty_bold} %s${tty_reset}\n" "$(shell_join "$@")"
+}
+
+warn() {
+  printf "${tty_red}Warning${tty_reset}: %s\n" "$(chomp "$1")" >&2
+}
+
+# --- lib/version.sh ---
+
+# Version comparison functions for Odyssey CLI installer
+
+major_minor() {
+  echo "${1%%.*}.$(
+    x="${1#*.}"
+    if [[ "${x}" == "$1" ]]
+    then
+      echo "0"
+    else
+     echo "${x%%.*}"
+    fi
+  )"
+}
+
+version_gt() {
+  [[ "${1%.*}" -gt "${2%.*}" ]] || [[ "${1%.*}" -eq "${2%.*}" && "${1#*.}" -gt "${2#*.}" ]]
+}
+
+version_ge() {
+  [[ "${1%.*}" -gt "${2%.*}" ]] || [[ "${1%.*}" -eq "${2%.*}" && "${1#*.}" -ge "${2#*.}" ]]
+}
+
+version_lt() {
+  [[ "${1%.*}" -lt "${2%.*}" ]] || [[ "${1%.*}" -eq "${2%.*}" && "${1#*.}" -lt "${2#*.}" ]]
+}
+
+# --- lib/file_permissions.sh ---
+
+# File permission functions for Odyssey CLI installer
+
+get_permission() {
+  "${STAT_PRINTF[@]}" "${PERMISSION_FORMAT}" "$1"
+}
+
+user_only_chmod() {
+  [[ -d "$1" ]] && [[ "$(get_permission "$1")" != 75[0145] ]]
+}
+
+exists_but_not_writable() {
+  [[ -e "$1" ]] && ! [[ -r "$1" && -w "$1" && -x "$1" ]]
+}
+
+get_owner() {
+  "${STAT_PRINTF[@]}" "%u" "$1"
+}
+
+file_not_owned() {
+  [[ "$(get_owner "$1")" != "$(id -u)" ]]
+}
+
+get_group() {
+  "${STAT_PRINTF[@]}" "%g" "$1"
+}
+
+file_not_grpowned() {
+  [[ " $(id -G "${USER}") " != *" $(get_group "$1") "* ]]
+}
+
+# --- lib/execution.sh ---
+
+# Execution functions for Odyssey CLI installer
+
+# Source utils.sh for shell_join function
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+unset HAVE_SUDO_ACCESS # unset this from the environment
+
+# shellcheck disable=SC2120
+have_sudo_access() {
+  local -a SUDO=()
+
+  if [[ $# -gt 0 ]];
+  then
+    SUDO=("$1")
+  else
+    SUDO=("/usr/bin/sudo")
+  fi
+
+  if [[ ! -x ${SUDO[0]} ]]
+  then
+    return 1
+  fi
+
+  if [[ -n "${SUDO_ASKPASS-}" ]]
+  then
+    SUDO+=("-A")
+  elif [[ -n "${NONINTERACTIVE-}" ]]
+  then
+    SUDO+=("-n")
+  fi
+
+  if [[ -z "${HAVE_SUDO_ACCESS-}" ]]
+  then
+    if [[ -n "${NONINTERACTIVE-}" ]]
+    then
+      "${SUDO[@]}" -l mkdir &>/dev/null
+    else
+      "${SUDO[@]}" -v && "${SUDO[@]}" -l mkdir &>/dev/null
+    fi
+    HAVE_SUDO_ACCESS="$?"
+  fi
+
+  if [[ -n "${ODYSSEY_ON_MACOS-}" ]] && [[ "${HAVE_SUDO_ACCESS}" -ne 0 ]]
+  then
+    abort "Need sudo access on macOS (e.g. the user ${USER} needs to be an Administrator)!"
+  fi
+
+  return "${HAVE_SUDO_ACCESS}"
+}
+
+execute() {
+  if ! "$@"
+  then
+    abort "$(printf "Failed during: %s" "$(shell_join "$@")")"
+  fi
+}
+
+execute_sudo() {
+  local -a args=("$@")
+  if [[ "${EUID:-${UID}}" != "0" ]] && have_sudo_access
+  then
+    if [[ -n "${SUDO_ASKPASS-}" ]]
+    then
+      args=("-A" "${args[@]}")
+    fi
+    ohai "/usr/bin/sudo" "${args[@]}"
+    execute "/usr/bin/sudo" "${args[@]}"
+  else
+    ohai "${args[@]}"
+    execute "${args[@]}"
+  fi
+}
+
+# --- lib/validation.sh ---
+
+# Validation functions for Odyssey CLI installer
+
+# Source version.sh for version comparison functions
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+test_curl() {
+  if [[ ! -x "$1" ]]
+  then
+    return 1
+  fi
+
+  if [[ "$1" == "/snap/bin/curl" ]]
+  then
+    warn "Ignoring $1 (curl snap is too restricted)"
+    return 1
+  fi
+
+  local curl_version_output curl_name_and_version
+  curl_version_output="$("$1" --version 2>/dev/null)"
+  curl_name_and_version="${curl_version_output%% (*}"
+  version_ge "$(major_minor "${curl_name_and_version##* }")" "$(major_minor "${REQUIRED_CURL_VERSION}")"
+}
+
+test_git() {
+  if [[ ! -x "$1" ]]
+  then
+    return 1
+  fi
+
+  local git_version_output
+  git_version_output="$("$1" --version 2>/dev/null)"
+  if [[ "${git_version_output}" =~ "git version "([^ ]*).* ]]
+  then
+    version_ge "$(major_minor "${BASH_REMATCH[1]}")" "$(major_minor "${REQUIRED_GIT_VERSION}")"
+  else
+    abort "Unexpected Git version: '${git_version_output}'!"
+  fi
+}
+
+# Search for the given executable in PATH (avoids a dependency on the `which` command)
+which() {
+  # Alias to Bash built-in command `type -P`
+  type -P "$@"
+}
+
+# Search PATH for the specified program that satisfies Odyssey requirements
+# function which is set above
+# shellcheck disable=SC2230
+find_tool() {
+  if [[ $# -ne 1 ]]
+  then
+    return 1
+  fi
+
+  local executable
+  while read -r executable
+  do
+    if [[ "${executable}" != /* ]]
+    then
+      warn "Ignoring ${executable} (relative paths don't work)"
+    elif "test_$1" "${executable}"
+    then
+      echo "${executable}"
+      break
+    fi
+  done < <(which -a "$1")
+}
+
+# ============================================================================
+# Main Installation Script (from bin/install.sh)
+# ============================================================================
+
+
 
 # Global variables (will be set by setup functions)
 declare ODYSSEY_PREFIX
@@ -636,3 +889,8 @@ main() {
   # Display success
   display_success_message
 }
+# ============================================================================
+# Execute main function with all arguments
+# ============================================================================
+
+main "$@"

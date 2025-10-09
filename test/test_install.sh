@@ -267,6 +267,81 @@ test_usage_displays_help() {
 }
 
 ####################
+# prepare_directories and setup_directory_permissions
+####################
+
+test_prepare_directories_handles_nonexistent_prefix() {
+  # Mock the ODYSSEY_PREFIX to a nonexistent location
+  ODYSSEY_PREFIX="/tmp/nonexistent_odyssey_test_$$"
+
+  # Mock file permission functions to avoid errors
+  exists_but_not_writable() { return 1; }
+  user_only_chmod() { return 1; }
+  export -f exists_but_not_writable
+  export -f user_only_chmod
+
+  # Should succeed even when directories don't exist
+  prepare_directories >/dev/null 2>&1
+  assertEquals "should succeed with nonexistent prefix" 0 $?
+
+  # Verify temp files were created
+  assertTrue "should create group_chmods temp file" "[ -f /tmp/odyssey_group_chmods.txt ]"
+  assertTrue "should create user_chmods temp file" "[ -f /tmp/odyssey_user_chmods.txt ]"
+}
+
+test_prepare_directories_with_empty_arrays() {
+  # Set up environment where all arrays will be empty
+  ODYSSEY_PREFIX="/tmp/odyssey_empty_test_$$"
+  mkdir -p "${ODYSSEY_PREFIX}/bin"
+  chmod 755 "${ODYSSEY_PREFIX}/bin"
+
+  # Mock functions to return false (no changes needed)
+  exists_but_not_writable() { return 1; }
+  user_only_chmod() { return 1; }
+  file_not_owned() { return 1; }
+  file_not_grpowned() { return 1; }
+  export -f exists_but_not_writable
+  export -f user_only_chmod
+  export -f file_not_owned
+  export -f file_not_grpowned
+
+  # Should not fail with unbound variable error
+  prepare_directories >/dev/null 2>&1
+  assertEquals "should succeed with empty arrays" 0 $?
+
+  # Clean up
+  rm -rf "${ODYSSEY_PREFIX}"
+}
+
+test_setup_directory_permissions_with_empty_arrays() {
+  # Create empty temp files
+  touch /tmp/odyssey_group_chmods.txt
+  touch /tmp/odyssey_user_chmods.txt
+  touch /tmp/odyssey_chmods.txt
+  touch /tmp/odyssey_chowns.txt
+  touch /tmp/odyssey_chgrps.txt
+  touch /tmp/odyssey_mkdirs.txt
+  touch /tmp/odyssey_mkdirs_user_only.txt
+
+  ODYSSEY_PREFIX="/tmp/odyssey_test_$$"
+
+  # Should not fail with unbound variable error when reading empty arrays
+  setup_directory_permissions >/dev/null 2>&1
+  assertEquals "should succeed with empty temp files" 0 $?
+}
+
+test_setup_directory_permissions_with_missing_temp_files() {
+  # Remove temp files if they exist
+  rm -f /tmp/odyssey_*.txt
+
+  ODYSSEY_PREFIX="/tmp/odyssey_test_$$"
+
+  # Should not fail when temp files don't exist
+  setup_directory_permissions >/dev/null 2>&1
+  assertEquals "should succeed with missing temp files" 0 $?
+}
+
+####################
 # Integration tests
 ####################
 

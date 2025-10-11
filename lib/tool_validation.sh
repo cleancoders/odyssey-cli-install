@@ -42,6 +42,8 @@ test_git() {
   fi
 }
 
+# TODO bb --version comes back with a v on the front. This needs to be shaved off for this to work,
+# TODO otherwise the script just always re-installs babashka
 REQUIRED_BB_VERSION="1.12.193"
 test_bb() {
   if [[ ! -x "$1" ]]

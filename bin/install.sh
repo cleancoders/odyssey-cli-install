@@ -115,6 +115,7 @@ make_odyssey_file_immutable(){
   fi
 }
 
+# TODO need error handling for curl - installer says success even if the download fails.
 install_odyssey_cli() {
   ohai "Downloading and installing Odyssey CLI..."
   (
@@ -159,7 +160,6 @@ main() {
 
   # Perform installation
   setup_directories
-  setup_repository_and_cache
   maybe_install_babashka
   install_odyssey_cli
 

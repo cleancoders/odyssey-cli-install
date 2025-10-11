@@ -50,6 +50,20 @@ tearDown() {
   fi
 }
 
+mock_execute(){
+    #shellcheck disable=SC2317
+    #shellcheck disable=SC2050
+    execute() {
+      if [[ "$1" == "/usr/bin/sudo" ]]; then
+        shift
+        "${MOCK_SUDO}" "$@"
+      else
+        command "$@"
+      fi
+    }
+    export -f execute
+}
+
 ##################################
 # have_sudo_access
 ##################################
@@ -188,18 +202,8 @@ test_execute_sudo_calls_sudo_with_command() {
     return 0
   }
   export -f have_sudo_access
+  mock_execute
 
-  #shellcheck disable=SC2317
-  #shellcheck disable=SC2050
-  execute() {
-    if [[ "$1" == "/usr/bin/sudo" ]]; then
-      shift
-      "${MOCK_SUDO}" "$@"
-    else
-      command "$@"
-    fi
-  }
-  export -f execute
 
   execute_sudo echo "test command" >/dev/null 2>&1
   grep "echo test command" "${SUDO_CALLS_LOG}" >/dev/null
@@ -215,18 +219,7 @@ test_execute_sudo_adds_askpass_flag() {
     return 0
   }
   export -f have_sudo_access
-
-  #shellcheck disable=SC2317
-  #shellcheck disable=SC2050
-  execute() {
-    if [[ "$1" == "/usr/bin/sudo" ]]; then
-      shift
-      "${MOCK_SUDO}" "$@"
-    else
-      command "$@"
-    fi
-  }
-  export -f execute
+  mock_execute
 
   execute_sudo echo "test" >/dev/null 2>&1
   grep -- "-A" "${SUDO_CALLS_LOG}" >/dev/null

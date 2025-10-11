@@ -19,7 +19,7 @@ source "${LIB_DIR}/version.sh"
 source "${LIB_DIR}/file_permissions.sh"
 # shellcheck source=../lib/execution.sh
 source "${LIB_DIR}/execution.sh"
-# shellcheck source=../lib/validation.sh
+# shellcheck source=../lib/tool_validation.sh
 source "${LIB_DIR}/validation.sh"
 
 # Fail fast with a concise message when not using bash

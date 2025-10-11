@@ -96,7 +96,7 @@ test_output_has_section_markers() {
   assertContains "Should contain version.sh marker" "$(cat "${TEST_OUTPUT_DIR}/install.sh")" "# --- lib/version.sh ---"
   assertContains "Should contain file_permissions.sh marker" "$(cat "${TEST_OUTPUT_DIR}/install.sh")" "# --- lib/file_permissions.sh ---"
   assertContains "Should contain execution.sh marker" "$(cat "${TEST_OUTPUT_DIR}/install.sh")" "# --- lib/execution.sh ---"
-  assertContains "Should contain validation.sh marker" "$(cat "${TEST_OUTPUT_DIR}/install.sh")" "# --- lib/validation.sh ---"
+  assertContains "Should contain tool_validation.sh marker" "$(cat "${TEST_OUTPUT_DIR}/install.sh")" "# --- lib/tool_validation.sh ---"
 }
 
 # Test that build script exits with 0 on success

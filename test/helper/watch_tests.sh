@@ -129,26 +129,79 @@ run_tests_for_file() {
   fi
 }
 
+# Debouncing variables
+LAST_CHANGE_TIME=0
+PENDING_FILES=()
+
+# Function to filter out files we should ignore
+should_ignore_file() {
+  local file="$1"
+  local basename=$(basename "${file}")
+
+  # Ignore temporary test files
+  [[ "${basename}" == temp_root_test_*.sh ]] && return 0
+  [[ "${basename}" == odyssey_*.txt ]] && return 0
+  [[ "${basename}" == .cleaned ]] && return 0
+
+  return 1
+}
+
 # Watch for changes and re-run tests
 if [[ "${WATCHER}" == "fswatch" ]]; then
-  # macOS using fswatch
+  # macOS using fswatch with batching
   fswatch \
+    --batch-marker \
+    --latency 0.5 \
     "${PROJECT_DIR}/bin" \
     "${PROJECT_DIR}/lib" \
     "${PROJECT_DIR}/test" \
     --exclude '.*\.swp$' \
     --exclude '.*~$' \
     --exclude '.*\.tmp$' \
+    --exclude '.*temp_.*' \
+    --exclude '.*odyssey_.*\.txt$' \
     --exclude '.*/\..*' | while read -r changed_file; do
-    clear
-    echo -e "${BLUE}========================================${NC}"
-    run_tests_for_file "${changed_file}"
-    echo ""
-    echo -e "${YELLOW}Watching for changes...${NC}"
+
+    # Skip batch markers - this is when we should run tests
+    if [[ "${changed_file}" == "NoOp" ]]; then
+      if [[ ${#PENDING_FILES[@]} -gt 0 ]]; then
+        clear
+        echo -e "${BLUE}========================================${NC}"
+
+        # Get the most relevant file (prefer test files, then source files)
+        local target_file="${PENDING_FILES[0]}"
+        for file in "${PENDING_FILES[@]}"; do
+          if [[ "${file}" == *"/test/test_"*.sh ]]; then
+            target_file="${file}"
+            break
+          fi
+        done
+
+        run_tests_for_file "${target_file}"
+        echo ""
+        echo -e "${YELLOW}Watching for changes...${NC}"
+
+        # Reset pending files
+        PENDING_FILES=()
+      fi
+      continue
+    fi
+
+    # Skip files we should ignore
+    should_ignore_file "${changed_file}" && continue
+
+    # Add file to pending list
+    PENDING_FILES+=("${changed_file}")
   done
 else
-  # Linux using inotifywait
+  # Linux using inotifywait with timeout-based batching
+  DEBOUNCE_DELAY=0.5
+
   while true; do
+    # Collect changes for the debounce period
+    PENDING_FILES=()
+
+    # Wait for first change
     changed_file=$(inotifywait -r -e modify,create,delete \
       --format '%w%f' \
       "${PROJECT_DIR}/bin" \
@@ -156,12 +209,48 @@ else
       "${PROJECT_DIR}/test" \
       --exclude '.*\.swp$' \
       --exclude '.*~$' \
-      --exclude '.*\.tmp$' 2>/dev/null)
+      --exclude '.*\.tmp$' \
+      --exclude '.*temp_.*' \
+      --exclude '.*odyssey_.*\.txt$' 2>/dev/null)
 
-    clear
-    echo -e "${BLUE}========================================${NC}"
-    run_tests_for_file "${changed_file}"
-    echo ""
-    echo -e "${YELLOW}Watching for changes...${NC}"
+    # Skip files we should ignore
+    if ! should_ignore_file "${changed_file}"; then
+      PENDING_FILES+=("${changed_file}")
+    fi
+
+    # Collect additional changes during debounce period
+    while IFS= read -r -t ${DEBOUNCE_DELAY} additional_file; do
+      if ! should_ignore_file "${additional_file}"; then
+        PENDING_FILES+=("${additional_file}")
+      fi
+    done < <(inotifywait -r -e modify,create,delete \
+      --format '%w%f' \
+      "${PROJECT_DIR}/bin" \
+      "${PROJECT_DIR}/lib" \
+      "${PROJECT_DIR}/test" \
+      --exclude '.*\.swp$' \
+      --exclude '.*~$' \
+      --exclude '.*\.tmp$' \
+      --exclude '.*temp_.*' \
+      --exclude '.*odyssey_.*\.txt$' 2>/dev/null || true)
+
+    # Run tests after debounce period
+    if [[ ${#PENDING_FILES[@]} -gt 0 ]]; then
+      clear
+      echo -e "${BLUE}========================================${NC}"
+
+      # Get the most relevant file (prefer test files, then source files)
+      local target_file="${PENDING_FILES[0]}"
+      for file in "${PENDING_FILES[@]}"; do
+        if [[ "${file}" == *"/test/test_"*.sh ]]; then
+          target_file="${file}"
+          break
+        fi
+      done
+
+      run_tests_for_file "${target_file}"
+      echo ""
+      echo -e "${YELLOW}Watching for changes...${NC}"
+    fi
   done
 fi

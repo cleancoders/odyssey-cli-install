@@ -1,72 +1,123 @@
 #!/bin/bash
 
-# Validation functions for Odyssey CLI installer
+# Environment and system validation functions
 
-# Source version.sh for version comparison functions
-# shellcheck source=lib/version.sh
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-source "${SCRIPT_DIR}/version.sh"
-source "${SCRIPT_DIR}/utils.sh"
+check_run_command_as_root() {
+  [[ "${EUID:-${UID}}" == "0" ]] || return
 
-test_curl() {
-  if [[ ! -x "$1" ]]
-  then
-    return 1
-  fi
+  # Allow Azure Pipelines/GitHub Actions/Docker/Concourse/Kubernetes to do everything as root (as it's normal there)
+  [[ -f /.dockerenv ]] && return
+  [[ -f /run/.containerenv ]] && return
+  [[ -f /proc/1/cgroup ]] && grep -E "azpl_job|actions_job|docker|garden|kubepods" -q /proc/1/cgroup && return
 
-  if [[ "$1" == "/snap/bin/curl" ]]
-  then
-    warn "Ignoring $1 (curl snap is too restricted)"
-    return 1
-  fi
-
-  local curl_version_output curl_name_and_version
-  curl_version_output="$("$1" --version 2>/dev/null)"
-  curl_name_and_version="${curl_version_output%% (*}"
-  version_ge "$(major_minor "${curl_name_and_version##* }")" "$(major_minor "${REQUIRED_CURL_VERSION}")"
+  abort "Don't run this as root!"
 }
 
-test_git() {
-  if [[ ! -x "$1" ]]
+check_bash_version() {
+  # Fail fast with a concise message when not using bash
+  # Single brackets are needed here for POSIX compatibility
+  # shellcheck disable=SC2292
+  if [ -z "${BASH_VERSION:-}" ]
   then
-    return 1
-  fi
-
-  local git_version_output
-  git_version_output="$("$1" --version 2>/dev/null)"
-  if [[ "${git_version_output}" =~ "git version "([^ ]*).* ]]
-  then
-    version_ge "$(major_minor "${BASH_REMATCH[1]}")" "$(major_minor "${REQUIRED_GIT_VERSION}")"
-  else
-    abort "Unexpected Git version: '${git_version_output}'!"
+    printf "%s\n" "Bash is required to interpret this script." >&2
+    exit 1
   fi
 }
 
-# Search for the given executable in PATH (avoids a dependency on the `which` command)
-which() {
-  # Alias to Bash built-in command `type -P`
-  type -P "$@"
-}
-
-# Search PATH for the specified program that satisfies Odyssey requirements
-# function which is set above
-# shellcheck disable=SC2230
-find_tool() {
-  if [[ $# -ne 1 ]]
+check_environment_conflicts() {
+  # Check if script is run with force-interactive mode in CI
+  if [[ -n "${CI-}" && -n "${INTERACTIVE-}" ]]
   then
-    return 1
+    abort "Cannot run force-interactive mode in CI."
   fi
 
-  local executable
-  while read -r executable
-  do
-    if [[ "${executable}" != /* ]]
+  # Check if both `INTERACTIVE` and `NONINTERACTIVE` are set
+  # Always use single-quoted strings with `exp` expressions
+  # shellcheck disable=SC2016
+  if [[ -n "${INTERACTIVE-}" && -n "${NONINTERACTIVE-}" ]]
+  then
+    abort 'Both `$INTERACTIVE` and `$NONINTERACTIVE` are set. Please unset at least one variable and try again.'
+  fi
+
+  # Check if script is run in POSIX mode
+  if [[ -n "${POSIXLY_CORRECT+1}" ]]
+  then
+    abort 'Bash must not run in POSIX mode. Please unset POSIXLY_CORRECT and try again.'
+  fi
+}
+
+check_prefix_permissions() {
+  if [[ -d "${ODYSSEY_PREFIX}" && ! -x "${ODYSSEY_PREFIX}" ]]
+  then
+    abort "The Odyssey prefix ${tty_underline}${ODYSSEY_PREFIX}${tty_reset} exists but is not searchable.
+If this is not intentional, please restore the default permissions and
+try running the installer again:
+    sudo chmod 775 ${ODYSSEY_PREFIX}"
+  fi
+}
+
+check_architecture() {
+  if [[ -n "${ODYSSEY_ON_MACOS-}" ]]
+  then
+    # On macOS, support 64-bit Intel and ARM
+    if [[ "${UNAME_MACHINE}" != "arm64" ]] && [[ "${UNAME_MACHINE}" != "x86_64" ]]
     then
-      warn "Ignoring ${executable} (relative paths don't work)"
-    elif "test_$1" "${executable}"
-    then
-      echo "${executable}"
-      break
+      abort "Odyssey is only supported on Intel and ARM processors!"
     fi
-  done < <(which -a "$1")
+  else
+    if [[ "${UNAME_MACHINE}" != "x86_64" ]] && [[ "${UNAME_MACHINE}" != "aarch64" ]]
+    then
+      abort "Odyssey on Linux is only supported on Intel x86_64 and ARM64 processors!"
+    fi
+  fi
+}
+
+check_sudo_access() {
+  # shellcheck disable=SC2016
+  ohai "Checking for \`sudo\` access (which may request your password)..."
+
+  if [[ -n "${ODYSSEY_ON_MACOS-}" ]]
+  then
+    [[ "${EUID:-${UID}}" == "0" ]] || have_sudo_access
+  elif ! [[ -w "${ODYSSEY_PREFIX}" ]] &&
+       ! [[ -w "/home/odyssey" ]] &&
+       ! [[ -w "/home" ]] &&
+       ! have_sudo_access
+  then
+    abort "Insufficient permissions to install Odyssey CLI to \"${ODYSSEY_PREFIX}\" (the default prefix)."
+  fi
+
+  check_run_command_as_root
+}
+
+MACOS_NEWEST_UNSUPPORTED="27.0"
+MACOS_OLDEST_SUPPORTED="14.0"
+check_macos_version() {
+  if [[ -n "${ODYSSEY_ON_MACOS-}" ]]
+  then
+    macos_version="$(major_minor "$(/usr/bin/sw_vers -productVersion)")"
+    if version_lt "${macos_version}" "10.7"
+    then
+      abort "Your Mac OS X version is too old."
+    elif version_lt "${macos_version}" "10.11"
+    then
+      abort "Your OS X version is too old."
+    elif version_ge "${macos_version}" "${MACOS_NEWEST_UNSUPPORTED}" ||
+         version_lt "${macos_version}" "${MACOS_OLDEST_SUPPORTED}"
+    then
+      who="We"
+      what=""
+      if version_ge "${macos_version}" "${MACOS_NEWEST_UNSUPPORTED}"
+      then
+        what="pre-release version"
+      else
+        who+=" (and Apple)"
+        what="old version"
+      fi
+      ohai "You are using macOS ${macos_version}."
+      ohai "${who} do not provide support for this ${what}."
+
+      printf "This installation may not succeed.\nYou are responsible for resolving any issues you experience while you are running this %s.\n" "$what" | tr -d "\\"
+    fi
+  fi
 }

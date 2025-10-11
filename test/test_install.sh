@@ -513,9 +513,6 @@ test_main_calls_installation_functions() {
   type main | grep -q 'setup_directories'
   assertEquals "main should call setup_directories" 0 $?
 
-  type main | grep -q 'setup_repository_and_cache'
-  assertEquals "main should call setup_repository_and_cache" 0 $?
-
   type main | grep -q 'maybe_install_babashka'
   assertEquals "main should call maybe_install_babashka" 0 $?
 

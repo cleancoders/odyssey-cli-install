@@ -47,14 +47,25 @@ and ensures that the created test file is executable. The corresponding source f
 
 ## Deployment 
 
-1. Merge changes to `production` branch. 
-2. Build the distributable installer file:
-    ```bash
-    make build-install
-    ```
-3. Push merged code and built installer file to remote:
+We prefer not to make commits on the production branch, 
+so build in the distributable file in `master` and then merge. Merges should be able to fast-forward.
+
+1. Once all changes have been committed to `master`, build the distributable installer file: 
    ```bash
+    make build-install
+   ```
+2. Push those changes on `master` to remote origin.
+ 
+3. Merge changes to `production`, ensure tests are passing, and push to remote origin:
+   ```bash
+   git checkout production
+   git pull
+   git merge master
+   
+   make test
+   
    git push origin production
+   git checkout master
    ```
 
 Build installer and run all tests: 

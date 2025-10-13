@@ -129,7 +129,6 @@ file_not_grpowned() {
 # Execution functions for Odyssey CLI installer
 
 # Source utils.sh for shell_join function
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 unset HAVE_SUDO_ACCESS # unset this from the environment
 
@@ -311,7 +310,6 @@ execute_curl() {
 # Validation functions for Odyssey CLI installer
 
 # Source version.sh for version comparison functions
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 test_curl() {
   if [[ ! -x "$1" ]]

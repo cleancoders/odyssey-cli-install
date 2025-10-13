@@ -12,16 +12,22 @@ SHUNIT2="${PROJECT_DIR}/shunit2"
 # Test fixtures
 TEST_OUTPUT_DIR=""
 
-# Setup function - runs before each test
-setUp() {
+# One-time setup - runs once before all tests
+oneTimeSetUp() {
   # Create a temporary directory for test output
   TEST_OUTPUT_DIR="$(mktemp -d)"
   cd "${PROJECT_DIR}" || fail "Could not cd to project directory"
+  # Build the installer once for all tests
   ./bin/build_installer.sh "${TEST_OUTPUT_DIR}"> /dev/null 2>&1
 }
 
-# Teardown function - runs after each test
-tearDown() {
+# Setup function - runs before each test
+setUp() {
+  cd "${PROJECT_DIR}" || fail "Could not cd to project directory"
+}
+
+# One-time teardown - runs once after all tests
+oneTimeTearDown() {
   # Clean up temporary directory
   if [[ -n "${TEST_OUTPUT_DIR}" && -d "${TEST_OUTPUT_DIR}" ]]; then
     rm -rf "${TEST_OUTPUT_DIR}"

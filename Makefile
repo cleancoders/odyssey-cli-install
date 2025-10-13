@@ -14,7 +14,7 @@ help: ## Show this help message
 	@echo '  make test-file FILE=bin/build_installer.sh'
 
 test: ## Run all tests
-	@./test/helper/run_all_tests.sh
+	@./test/helper/run_tests_parallel.sh
 
 test-watch: ## Watch for changes and re-run tests automatically
 	@./test/helper/watch_tests.sh

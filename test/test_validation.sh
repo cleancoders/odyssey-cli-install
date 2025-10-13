@@ -21,14 +21,8 @@ source "${PROJECT_DIR}/lib/execution.sh"
 # shellcheck disable=SC1090
 source "${PROJECT_DIR}/lib/validation.sh"
 
-# Test fixtures
-TEST_OUTPUT_DIR=""
-
 # Setup function - runs before each test
 setUp() {
-  # Create a temporary directory for test output
-  TEST_OUTPUT_DIR="$(mktemp -d)"
-
   # Clear environment variables
   unset NONINTERACTIVE
   unset INTERACTIVE
@@ -46,11 +40,6 @@ setUp() {
 
 # Teardown function - runs after each test
 tearDown() {
-  # Clean up temporary directory
-  if [[ -n "${TEST_OUTPUT_DIR}" && -d "${TEST_OUTPUT_DIR}" ]]; then
-    rm -rf "${TEST_OUTPUT_DIR}"
-  fi
-
   # Clean up environment variables that tests might have set
   unset POSIXLY_CORRECT
   unset CI

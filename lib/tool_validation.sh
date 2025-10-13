@@ -42,8 +42,6 @@ test_git() {
   fi
 }
 
-# TODO bb --version comes back with a v on the front. This needs to be shaved off for this to work,
-# TODO otherwise the script just always re-installs babashka
 REQUIRED_BB_VERSION="1.12.193"
 test_bb() {
   if [[ ! -x "$1" ]]
@@ -51,10 +49,13 @@ test_bb() {
     return 1
   fi
 
-  local bb_version_output bb_name_and_version
+  local bb_version_output bb_name_and_version bb_version
   bb_version_output="$("$1" --version 2>/dev/null)"
   bb_name_and_version="${bb_version_output%% (*}"
-  version_ge "$(major_minor "${bb_name_and_version##* }")" "$(major_minor "${REQUIRED_BB_VERSION}")"
+  bb_version="${bb_name_and_version##* }"
+  # Strip leading 'v' if present (babashka outputs "babashka v1.12.193")
+  bb_version="${bb_version#v}"
+  version_ge "$(major_minor "${bb_version}")" "$(major_minor "${REQUIRED_BB_VERSION}")"
 }
 
 # Search for the given executable in PATH (avoids a dependency on the `which` command)
@@ -88,7 +89,7 @@ find_tool() {
 
 install_babashka() {
    cd /usr/local || exit 1
-   execute_sudo "curl" "-sSLO" "https://raw.githubusercontent.com/babashka/babashka/master/install"
+   execute_curl "-sSLO" "https://raw.githubusercontent.com/babashka/babashka/master/install"
    execute_sudo "${CHMOD[@]}" "+x" install
    execute_sudo "./install" "--static"
 }

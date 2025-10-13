@@ -61,14 +61,22 @@ source "${PROJECT_DIR}/SOURCE_PATH"
 # Test fixtures
 TEST_OUTPUT_DIR=""
 
-# Setup function - runs before each test
-setUp() {
+# Setup function - runs before all tests
+oneTimeSetUp() {
   # Create a temporary directory for test output
   TEST_OUTPUT_DIR="$(mktemp -d)"
 }
 
-# Teardown function - runs after each test
-tearDown() {
+# runs before each test
+setUp(){
+}
+
+# runs after each test
+tearDown(){
+}
+
+# Teardown function - runs after all tests
+oneTimeTearDown() {
   # Clean up temporary directory
   if [[ -n "${TEST_OUTPUT_DIR}" && -d "${TEST_OUTPUT_DIR}" ]]; then
     rm -rf "${TEST_OUTPUT_DIR}"

@@ -17,16 +17,21 @@ source "${PROJECT_DIR}/lib/execution.sh"
 TEST_OUTPUT_DIR=""
 MOCK_SUDO=""
 
+# One-time setup - runs once before all tests
+oneTimeSetUp() {
+  # Create a single temporary directory for all tests
+  TEST_OUTPUT_DIR="$(mktemp -d)"
+}
+
 # Setup function - runs before each test
 setUp() {
-  # Create a temporary directory for test output
-  TEST_OUTPUT_DIR="$(mktemp -d)"
-
-  # Create a mock for sudo
+  # Create a mock for sudo (recreate each time since some tests delete it)
   MOCK_SUDO="${TEST_OUTPUT_DIR}/sudo"
 
-  # Create log file to track sudo calls
+  # Create/clear log file to track sudo calls
   SUDO_CALLS_LOG="${TEST_OUTPUT_DIR}/sudo_calls.log"
+  > "${SUDO_CALLS_LOG}"
+
   cat > "${MOCK_SUDO}" << EOF
 #!/bin/bash
 # Stores args and returns success/failure
@@ -44,6 +49,12 @@ EOF
 
 # Teardown function - runs after each test
 tearDown() {
+  # Change back to project directory to avoid issues with deleted directories
+  cd "${PROJECT_DIR}" 2>/dev/null || true
+}
+
+# One-time teardown - runs once after all tests
+oneTimeTearDown() {
   # Clean up temporary directory
   if [[ -n "${TEST_OUTPUT_DIR}" && -d "${TEST_OUTPUT_DIR}" ]]; then
     rm -rf "${TEST_OUTPUT_DIR}"
@@ -226,6 +237,199 @@ test_execute_sudo_adds_askpass_flag() {
   assertEquals "should add -A flag when SUDO_ASKPASS is set" 0 $?
 
   unset SUDO_ASKPASS
+}
+
+############
+# execute_curl
+############
+
+test_execute_curl_succeeds_with_200_status() {
+  # Mock execute_sudo to simulate curl with 200 status
+  #shellcheck disable=SC2317
+  execute_sudo() {
+    if [[ "$1" == "curl" ]]; then
+      # Simulate curl output: body + newline + status code
+      echo -e "test content\n200"
+    elif [[ "$1" == "tee" ]]; then
+      # tee writes stdin to file and stdout
+      command tee "$2"
+    fi
+  }
+  export -f execute_sudo
+
+  local output_file="${TEST_OUTPUT_DIR}/downloaded.txt"
+  execute_curl "-o" "${output_file}" "http://example.com/file"
+
+  assertTrue "should create output file" "[ -f '${output_file}' ]"
+  grep "test content" "${output_file}" >/dev/null
+  assertEquals "should write body to file" 0 $?
+}
+
+test_execute_curl_succeeds_with_201_status() {
+  # Mock execute_sudo to simulate curl with 201 status
+  #shellcheck disable=SC2317
+  execute_sudo() {
+    if [[ "$1" == "curl" ]]; then
+      echo -e "created\n201"
+    elif [[ "$1" == "tee" ]]; then
+      command tee "$2"
+    fi
+  }
+  export -f execute_sudo
+
+  local output_file="${TEST_OUTPUT_DIR}/created.txt"
+  execute_curl "-o" "${output_file}" "http://example.com/resource"
+
+  assertTrue "should create output file for 201 status" "[ -f '${output_file}' ]"
+}
+
+test_execute_curl_aborts_on_404_status() {
+  # Mock execute_sudo to simulate curl with 404 status
+  #shellcheck disable=SC2317
+  execute_sudo() {
+    if [[ "$1" == "curl" ]]; then
+      echo -e "Not Found\n404"
+    elif [[ "$1" == "tee" ]]; then
+      command tee "$2"
+    fi
+  }
+  export -f execute_sudo
+
+  local output_file="${TEST_OUTPUT_DIR}/notfound.txt"
+  output=$(execute_curl "-o" "${output_file}" "http://example.com/missing" 2>&1)
+  exit_code=$?
+
+  assertEquals "should exit 1 on 404 status" 1 ${exit_code}
+  echo "$output" | grep "HTTP request failed with status code 404" >/dev/null
+  assertEquals "should print error about 404 status" 0 $?
+}
+
+test_execute_curl_aborts_on_500_status() {
+  # Mock execute_sudo to simulate curl with 500 status
+  #shellcheck disable=SC2317
+  execute_sudo() {
+    if [[ "$1" == "curl" ]]; then
+      echo -e "Internal Server Error\n500"
+    elif [[ "$1" == "tee" ]]; then
+      command tee "$2"
+    fi
+  }
+  export -f execute_sudo
+
+  output=$(execute_curl "-o" "${TEST_OUTPUT_DIR}/error.txt" "http://example.com/fail" 2>&1)
+  exit_code=$?
+
+  assertEquals "should exit 1 on 500 status" 1 ${exit_code}
+  echo "$output" | grep "HTTP request failed with status code 500" >/dev/null
+  assertEquals "should print error about 500 status" 0 $?
+}
+
+test_execute_curl_handles_dash_O_flag() {
+  # Mock execute_sudo to simulate curl with -O flag (extract filename from URL)
+  #shellcheck disable=SC2317
+  execute_sudo() {
+    if [[ "$1" == "curl" ]]; then
+      echo -e "file contents\n200"
+    elif [[ "$1" == "tee" ]]; then
+      command tee "$2"
+    fi
+  }
+  export -f execute_sudo
+
+  cd "${TEST_OUTPUT_DIR}" || exit 1
+  execute_curl "-O" "http://example.com/path/to/myfile.txt"
+
+  assertTrue "should create file with name from URL" "[ -f 'myfile.txt' ]"
+  grep "file contents" "myfile.txt" >/dev/null
+  assertEquals "should write correct contents" 0 $?
+}
+
+test_execute_curl_handles_dash_LO_flag() {
+  # Mock execute_sudo to simulate curl with -LO flag
+  #shellcheck disable=SC2317
+  execute_sudo() {
+    if [[ "$1" == "curl" ]]; then
+      echo -e "redirected content\n200"
+    elif [[ "$1" == "tee" ]]; then
+      command tee "$2"
+    fi
+  }
+  export -f execute_sudo
+
+  cd "${TEST_OUTPUT_DIR}" || exit 1
+  execute_curl "-LO" "http://example.com/redirect/target.bin"
+
+  assertTrue "should create file with name from URL" "[ -f 'target.bin' ]"
+  grep "redirected content" "target.bin" >/dev/null
+  assertEquals "should write redirected content" 0 $?
+}
+
+test_execute_curl_writes_to_stdout_without_output_flag() {
+  # Mock execute_sudo to simulate curl without output file
+  #shellcheck disable=SC2317
+  execute_sudo() {
+    if [[ "$1" == "curl" ]]; then
+      echo -e "stdout content\n200"
+    elif [[ "$1" == "tee" ]]; then
+      command tee "$2"
+    fi
+  }
+  export -f execute_sudo
+
+  output=$(execute_curl "http://example.com/data")
+
+  echo "$output" | grep "stdout content" >/dev/null
+  assertEquals "should write to stdout when no output file specified" 0 $?
+}
+
+test_execute_curl_passes_curl_args_correctly() {
+  local captured_args="${TEST_OUTPUT_DIR}/curl_args.txt"
+
+  # Mock execute_sudo to capture arguments
+  #shellcheck disable=SC2317
+  execute_sudo() {
+    if [[ "$1" == "curl" ]]; then
+      # Save all arguments to file
+      printf '%s\n' "$@" > "${captured_args}"
+      echo -e "data\n200"
+    elif [[ "$1" == "tee" ]]; then
+      command tee "$2"
+    fi
+  }
+  export -f execute_sudo
+
+  execute_curl "-H" "Authorization: Bearer token" "-L" "http://example.com/api" >/dev/null
+
+  grep -- "curl" "${captured_args}" >/dev/null
+  assertEquals "should pass curl command" 0 $?
+  grep -- "-H" "${captured_args}" >/dev/null
+  assertEquals "should pass -H flag" 0 $?
+  grep -- "Authorization: Bearer token" "${captured_args}" >/dev/null
+  assertEquals "should pass header value" 0 $?
+}
+
+test_execute_curl_handles_multiline_response() {
+  # Mock execute_sudo to simulate multi-line response
+  #shellcheck disable=SC2317
+  execute_sudo() {
+    if [[ "$1" == "curl" ]]; then
+      printf "line1\nline2\nline3\n200"
+    elif [[ "$1" == "tee" ]]; then
+      command tee "$2"
+    fi
+  }
+  export -f execute_sudo
+
+  local output_file="${TEST_OUTPUT_DIR}/multiline.txt"
+  execute_curl "-o" "${output_file}" "http://example.com/multiline"
+
+  assertTrue "should create output file" "[ -f '${output_file}' ]"
+  grep "line1" "${output_file}" >/dev/null
+  assertEquals "should contain first line" 0 $?
+  grep "line3" "${output_file}" >/dev/null
+  assertEquals "should contain last line" 0 $?
+  grep "200" "${output_file}" >/dev/null
+  assertNotEquals "should not include status code in body" 0 $?
 }
 
 # Load and run shunit2

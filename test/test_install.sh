@@ -110,13 +110,18 @@ mock_execute_sudo_for_install() {
   # shellcheck disable=SC2317
   execute_sudo() {
     if [[ "$1" == "curl" ]]; then
-      echo "curl:$3" >> "${ODYSSEY_TEST_TRACKER}"
-      # If file exists, replace it; otherwise create it
-      if [[ -e "${ODYSSEY_PREFIX}/bin/odyssey" ]]; then
-        echo "new version" > "${ODYSSEY_PREFIX}/bin/odyssey"
-      else
-        touch "${ODYSSEY_PREFIX}/bin/odyssey"
-      fi
+      # Find the URL argument (look for argument after -LO or -O flag)
+      local url=""
+      local i=0
+      for arg in "$@"; do
+        if [[ "${arg}" == http* ]]; then
+          url="${arg}"
+          break
+        fi
+      done
+      echo "curl:${url}" >> "${ODYSSEY_TEST_TRACKER}"
+      # Return mock response in format expected by execute_curl: body\n<status_code>
+      printf "mock binary content\n200"
     elif [[ "$1" == "/bin/chmod" ]]; then
       echo "chmod:$2" >> "${ODYSSEY_TEST_TRACKER}"
       chmod "$2" "${ODYSSEY_PREFIX}/bin/odyssey" 2>/dev/null || true
@@ -379,7 +384,8 @@ test_install_odyssey_cli_changes_to_bin_directory() {
   execute_sudo() {
     if [[ "$1" == "curl" ]]; then
       pwd > "${tracker}"
-      touch "${ODYSSEY_PREFIX}/bin/odyssey"
+      # Return mock response in format expected by execute_curl
+      printf "mock content\n200"
     elif [[ "$1" == "/bin/chmod" ]]; then
       chmod +x "${ODYSSEY_PREFIX}/bin/odyssey"
     elif [[ "$1" == "/usr/bin/chflags" || "$1" == *"chattr"* ]]; then

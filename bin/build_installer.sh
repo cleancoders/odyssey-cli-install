@@ -95,11 +95,12 @@ EOF
 
     echo "# --- lib/${lib_file} ---"
 
-    # Skip shebang, remove source statements and shellcheck directives
+    # Skip shebang, remove source statements, shellcheck directives, and SCRIPT_DIR assignments
     tail -n +2 "${lib_path}" | \
       grep -v '^source ' | \
       grep -v '^# shellcheck source=' | \
-      grep -v '^PROJECT_DIR='
+      grep -v '^PROJECT_DIR=' | \
+      grep -v '^SCRIPT_DIR='
 
     echo ""
   done

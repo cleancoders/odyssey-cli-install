@@ -78,6 +78,20 @@ test_output_no_source_statements() {
   fi
 }
 
+# Test that output file does not contain BASH_SOURCE references
+test_output_no_bash_source() {
+  if grep -q 'BASH_SOURCE\[0\]' "${TEST_OUTPUT_DIR}/install.sh" 2>/dev/null; then
+    fail "Should have no BASH_SOURCE references (causes unbound variable error when piped to bash)"
+  fi
+}
+
+# Test that output file does not contain SCRIPT_DIR assignments
+test_output_no_script_dir() {
+  if grep -q '^SCRIPT_DIR=' "${TEST_OUTPUT_DIR}/install.sh" 2>/dev/null; then
+    fail "Should have no SCRIPT_DIR assignments from library files"
+  fi
+}
+
 # Test that output file has valid bash syntax
 test_output_valid_syntax() {
   bash -n "${TEST_OUTPUT_DIR}/install.sh"

@@ -75,6 +75,68 @@ mock_execute(){
     export -f execute
 }
 
+# Helper: Mock curl to simulate file download with status code
+# Usage: mock_curl_with_file_output "body content" "status_code"
+mock_curl_with_file_output() {
+  export MOCK_CURL_BODY="$1"
+  export MOCK_CURL_STATUS="$2"
+
+  #shellcheck disable=SC2317
+  execute_sudo() {
+    if [[ "$1" == "curl" ]]; then
+      # Find output file from -o flag or extract from URL for -O/-LO
+      local i=0
+      local output_file=""
+      local has_O_flag=false
+
+      while [[ $i -lt $# ]]; do
+        if [[ "${!i}" == "-o" ]]; then
+          ((i++))
+          output_file="${!i}"
+          break
+        elif [[ "${!i}" == "-O" ]] || [[ "${!i}" == "-LO" ]]; then
+          has_O_flag=true
+        fi
+        ((i++))
+      done
+
+      # If -O or -LO flag, extract filename from URL (last argument)
+      if [[ "${has_O_flag}" == "true" ]]; then
+        local url="${!#}"
+        output_file="${url##*/}"
+      fi
+
+      # Write to file if output file specified, otherwise to stdout
+      if [[ -n "${output_file}" ]]; then
+        printf "%s" "${MOCK_CURL_BODY}" > "${output_file}"
+        printf "\n%s" "${MOCK_CURL_STATUS}"
+      else
+        printf "%s\n%s" "${MOCK_CURL_BODY}" "${MOCK_CURL_STATUS}"
+      fi
+    elif [[ "$1" == "tee" ]]; then
+      command tee "$2"
+    fi
+  }
+  export -f execute_sudo
+}
+
+# Helper: Mock curl to simulate response without file output (for error cases)
+# Usage: mock_curl_with_status "body content" "status_code"
+mock_curl_with_status() {
+  export MOCK_CURL_BODY="$1"
+  export MOCK_CURL_STATUS="$2"
+
+  #shellcheck disable=SC2317
+  execute_sudo() {
+    if [[ "$1" == "curl" ]]; then
+      printf "%s\n%s" "${MOCK_CURL_BODY}" "${MOCK_CURL_STATUS}"
+    elif [[ "$1" == "tee" ]]; then
+      command tee "$2"
+    fi
+  }
+  export -f execute_sudo
+}
+
 ##################################
 # have_sudo_access
 ##################################
@@ -244,18 +306,7 @@ test_execute_sudo_adds_askpass_flag() {
 ############
 
 test_execute_curl_succeeds_with_200_status() {
-  # Mock execute_sudo to simulate curl with 200 status
-  #shellcheck disable=SC2317
-  execute_sudo() {
-    if [[ "$1" == "curl" ]]; then
-      # Simulate curl output: body + newline + status code
-      echo -e "test content\n200"
-    elif [[ "$1" == "tee" ]]; then
-      # tee writes stdin to file and stdout
-      command tee "$2"
-    fi
-  }
-  export -f execute_sudo
+  mock_curl_with_file_output "test content" "200"
 
   local output_file="${TEST_OUTPUT_DIR}/downloaded.txt"
   execute_curl "-o" "${output_file}" "http://example.com/file"
@@ -266,16 +317,7 @@ test_execute_curl_succeeds_with_200_status() {
 }
 
 test_execute_curl_succeeds_with_201_status() {
-  # Mock execute_sudo to simulate curl with 201 status
-  #shellcheck disable=SC2317
-  execute_sudo() {
-    if [[ "$1" == "curl" ]]; then
-      echo -e "created\n201"
-    elif [[ "$1" == "tee" ]]; then
-      command tee "$2"
-    fi
-  }
-  export -f execute_sudo
+  mock_curl_with_file_output "created" "201"
 
   local output_file="${TEST_OUTPUT_DIR}/created.txt"
   execute_curl "-o" "${output_file}" "http://example.com/resource"
@@ -284,16 +326,7 @@ test_execute_curl_succeeds_with_201_status() {
 }
 
 test_execute_curl_aborts_on_404_status() {
-  # Mock execute_sudo to simulate curl with 404 status
-  #shellcheck disable=SC2317
-  execute_sudo() {
-    if [[ "$1" == "curl" ]]; then
-      echo -e "Not Found\n404"
-    elif [[ "$1" == "tee" ]]; then
-      command tee "$2"
-    fi
-  }
-  export -f execute_sudo
+  mock_curl_with_status "Not Found" "404"
 
   local output_file="${TEST_OUTPUT_DIR}/notfound.txt"
   output=$(execute_curl "-o" "${output_file}" "http://example.com/missing" 2>&1)
@@ -305,16 +338,7 @@ test_execute_curl_aborts_on_404_status() {
 }
 
 test_execute_curl_aborts_on_500_status() {
-  # Mock execute_sudo to simulate curl with 500 status
-  #shellcheck disable=SC2317
-  execute_sudo() {
-    if [[ "$1" == "curl" ]]; then
-      echo -e "Internal Server Error\n500"
-    elif [[ "$1" == "tee" ]]; then
-      command tee "$2"
-    fi
-  }
-  export -f execute_sudo
+  mock_curl_with_status "Internal Server Error" "500"
 
   output=$(execute_curl "-o" "${TEST_OUTPUT_DIR}/error.txt" "http://example.com/fail" 2>&1)
   exit_code=$?
@@ -325,16 +349,7 @@ test_execute_curl_aborts_on_500_status() {
 }
 
 test_execute_curl_handles_dash_O_flag() {
-  # Mock execute_sudo to simulate curl with -O flag (extract filename from URL)
-  #shellcheck disable=SC2317
-  execute_sudo() {
-    if [[ "$1" == "curl" ]]; then
-      echo -e "file contents\n200"
-    elif [[ "$1" == "tee" ]]; then
-      command tee "$2"
-    fi
-  }
-  export -f execute_sudo
+  mock_curl_with_file_output "file contents" "200"
 
   cd "${TEST_OUTPUT_DIR}" || exit 1
   execute_curl "-O" "http://example.com/path/to/myfile.txt"
@@ -345,16 +360,7 @@ test_execute_curl_handles_dash_O_flag() {
 }
 
 test_execute_curl_handles_dash_LO_flag() {
-  # Mock execute_sudo to simulate curl with -LO flag
-  #shellcheck disable=SC2317
-  execute_sudo() {
-    if [[ "$1" == "curl" ]]; then
-      echo -e "redirected content\n200"
-    elif [[ "$1" == "tee" ]]; then
-      command tee "$2"
-    fi
-  }
-  export -f execute_sudo
+  mock_curl_with_file_output "redirected content" "200"
 
   cd "${TEST_OUTPUT_DIR}" || exit 1
   execute_curl "-LO" "http://example.com/redirect/target.bin"
@@ -365,16 +371,7 @@ test_execute_curl_handles_dash_LO_flag() {
 }
 
 test_execute_curl_writes_to_stdout_without_output_flag() {
-  # Mock execute_sudo to simulate curl without output file
-  #shellcheck disable=SC2317
-  execute_sudo() {
-    if [[ "$1" == "curl" ]]; then
-      echo -e "stdout content\n200"
-    elif [[ "$1" == "tee" ]]; then
-      command tee "$2"
-    fi
-  }
-  export -f execute_sudo
+  mock_curl_with_file_output "stdout content" "200"
 
   output=$(execute_curl "http://example.com/data")
 
@@ -409,16 +406,9 @@ test_execute_curl_passes_curl_args_correctly() {
 }
 
 test_execute_curl_handles_multiline_response() {
-  # Mock execute_sudo to simulate multi-line response
-  #shellcheck disable=SC2317
-  execute_sudo() {
-    if [[ "$1" == "curl" ]]; then
-      printf "line1\nline2\nline3\n200"
-    elif [[ "$1" == "tee" ]]; then
-      command tee "$2"
-    fi
-  }
-  export -f execute_sudo
+  mock_curl_with_file_output "line1
+line2
+line3" "200"
 
   local output_file="${TEST_OUTPUT_DIR}/multiline.txt"
   execute_curl "-o" "${output_file}" "http://example.com/multiline"

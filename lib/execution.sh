@@ -67,10 +67,10 @@ execute_sudo() {
     then
       args=("-A" "${args[@]}")
     fi
-    ohai "/usr/bin/sudo" "${args[@]}"
+    ohai "/usr/bin/sudo" "${args[@]}" >&2
     execute "/usr/bin/sudo" "${args[@]}"
   else
-    ohai "${args[@]}"
+    ohai "${args[@]}" >&2
     execute "${args[@]}"
   fi
 }
@@ -159,14 +159,25 @@ execute_curl() {
     needs_sudo="true"
   fi
 
+  output_file=$(parse_curl_output_file "${curl_args[@]}")
+
   # Build curl arguments with HTTP status code capture
   # -w '\n%{http_code}' writes a newline followed by HTTP status code at the end
   # -S shows errors
   local -a full_curl_args=("curl" "-w" "\n%{http_code}" "-S" "${curl_args[@]}")
-  response=$(execute_sudo "${full_curl_args[@]}")
-  http_code=$(extract_http_status "${response}")
-  body=$(extract_response_body "${response}")
-  output_file=$(parse_curl_output_file "${curl_args[@]}")
-  write_curl_output "${body}" "${output_file}" "${needs_sudo}"
+
+  # If curl is writing to a file directly (-o, -O, -LO), capture only stderr+status
+  # Otherwise capture stdout (body + status)
+  if [[ -n "${output_file}" ]]; then
+    response=$(execute_sudo "${full_curl_args[@]}")
+    http_code=$(echo "${response}" | tail -n 1)
+  else
+    # curl writes to stdout, we need to capture body and status code
+    response=$(execute_sudo "${full_curl_args[@]}")
+    http_code=$(extract_http_status "${response}")
+    body=$(extract_response_body "${response}")
+    write_curl_output "${body}" "" "${needs_sudo}"
+  fi
+
   validate_http_status "${http_code}" "${curl_args[@]}"
 }

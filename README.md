@@ -14,7 +14,7 @@ All script files that are executed directly are in `bin`.
 
 `lib` is a directory of files containing helper and utility functions that are imported and used by files in `bin`.
 
-`bin/install.sh` is the source file for the installer file that gets built a distributed to users. 
+`bin/install.sh` is the source file for the installer file that gets built and distributed to users. 
 
 The actual built file that gets distributed to users is put in the top level of the project and is built with 
 `make build-install`

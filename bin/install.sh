@@ -33,8 +33,6 @@ declare ODYSSEY_PREFIX
 # shellcheck disable=SC2034
 declare ODYSSEY_REPOSITORY
 # shellcheck disable=SC2034
-declare ODYSSEY_CACHE
-# shellcheck disable=SC2034
 declare STAT_PRINTF
 # shellcheck disable=SC2034
 declare PERMISSION_FORMAT

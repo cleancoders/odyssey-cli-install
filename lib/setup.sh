@@ -38,6 +38,7 @@ setup_user() {
 }
 
 # shellcheck disable=SC2120
+# shellcheck disable=SC2034
 detect_os() {
   # First check OS.
   OS="$(uname)"
@@ -58,48 +59,20 @@ detect_os() {
   fi
 }
 
+# shellcheck disable=SC2034
 setup_paths() {
-  # Required installation paths.
-  if [[ -n "${ODYSSEY_ON_MACOS-}" ]]
-  then
-    UNAME_MACHINE="$(/usr/bin/uname -m)"
-
-      ODYSSEY_PREFIX="/usr/local"
-      ODYSSEY_REPOSITORY="${ODYSSEY_PREFIX}/odyssey"
-    ODYSSEY_CACHE="${HOME}/Library/Caches/Odyssey"
-
-    STAT_PRINTF=("/usr/bin/stat" "-f")
-    PERMISSION_FORMAT="%A"
-    CHOWN=("/usr/sbin/chown")
-    CHGRP=("/usr/bin/chgrp")
-    GROUP="admin"
-    TOUCH=("/usr/bin/touch")
-    INSTALL=("/usr/bin/install" -d -o "root" -g "wheel" -m "0755")
-  else
-    UNAME_MACHINE="$(uname -m)"
-
-    # On Linux, this script installs to /home/odyssey/.odyssey only
-    ODYSSEY_PREFIX="/home/odyssey/.odyssey"
-    ODYSSEY_REPOSITORY="${ODYSSEY_PREFIX}/odyssey"
-    ODYSSEY_CACHE="${HOME}/.cache/odyssey"
-
-    STAT_PRINTF=("/usr/bin/stat" "-c")
-    PERMISSION_FORMAT="%a"
-    CHOWN=("/bin/chown")
-    CHGRP=("/bin/chgrp")
-    GROUP="$(id -gn)"
-    TOUCH=("/bin/touch")
-    INSTALL=("/usr/bin/install" -d -o "${USER}" -g "${GROUP}" -m "0755")
-  fi
+  UNAME_MACHINE="$(/usr/bin/uname -m)"
+  ODYSSEY_PREFIX="/usr/local"
+  ODYSSEY_REPOSITORY="${ODYSSEY_PREFIX}/odyssey"
+  STAT_PRINTF=("/usr/bin/stat" "-f")
+  PERMISSION_FORMAT="%A"
+  CHOWN=("/usr/sbin/chown")
+  CHGRP=("/usr/bin/chgrp")
+  GROUP="admin"
+  TOUCH=("/usr/bin/touch")
+  INSTALL=("/usr/bin/install" -d -o "root" -g "wheel" -m "0755")
   CHMOD=("/bin/chmod")
   MKDIR=("/bin/mkdir" "-p")
-
-  # create paths.d file for /opt/odyssey installs
-  # (/usr/local/bin is already in the PATH)
-  if [[ -d "/etc/paths.d" && "${ODYSSEY_PREFIX}" != "/usr/local" && -x "$(command -v tee)" ]]
-  then
-    ADD_PATHS_D=1
-  fi
 }
 
 setup_sudo_trap() {

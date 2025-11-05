@@ -140,15 +140,6 @@ test_setup_paths_sets_required_variables() {
 
   [[ -n "${ODYSSEY_REPOSITORY}" ]]
   assertEquals "should set ODYSSEY_REPOSITORY" 0 $?
-
-  [[ -n "${ODYSSEY_CACHE}" ]]
-  assertEquals "should set ODYSSEY_CACHE" 0 $?
-}
-
-test_setup_paths_checks_for_macos() {
-  # Verify the function checks for ODYSSEY_ON_MACOS variable
-  type setup_paths | grep -q 'ODYSSEY_ON_MACOS'
-  assertEquals "should check for ODYSSEY_ON_MACOS variable" 0 $?
 }
 
 test_setup_paths_sets_macos_prefix_for_arm64() {
@@ -194,22 +185,9 @@ test_setup_paths_sets_linux_prefix() {
 
   setup_paths
 
-  assertEquals "should set Linux prefix" "/home/odyssey/.odyssey" "${ODYSSEY_PREFIX}"
-  assertEquals "should set Linux repository" "/home/odyssey/.odyssey/odyssey" "${ODYSSEY_REPOSITORY}"
+  assertEquals "should set Linux prefix" "/usr/local" "${ODYSSEY_PREFIX}"
+  assertEquals "should set Linux repository" "/usr/local/odyssey" "${ODYSSEY_REPOSITORY}"
 }
-
-test_setup_paths_sets_macos_cache_location() {
-  # Verify function sets macOS cache in Library/Caches
-  type setup_paths | grep -q 'Library/Caches/Odyssey'
-  assertEquals "should reference macOS cache location" 0 $?
-}
-
-test_setup_paths_sets_linux_cache_location() {
-  # Verify function sets Linux cache in .cache
-  type setup_paths | grep -q '\.cache/odyssey'
-  assertEquals "should reference Linux cache location" 0 $?
-}
-
 ####################
 # setup_sudo_trap
 ####################

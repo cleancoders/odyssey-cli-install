@@ -64,16 +64,8 @@ setup_paths() {
   then
     UNAME_MACHINE="$(/usr/bin/uname -m)"
 
-    if [[ "${UNAME_MACHINE}" == "arm64" ]]
-    then
-      # On ARM macOS, this script installs to /opt/odyssey only
-      ODYSSEY_PREFIX="/opt/odyssey"
-      ODYSSEY_REPOSITORY="${ODYSSEY_PREFIX}"
-    else
-      # On Intel macOS, this script installs to /usr/local only
       ODYSSEY_PREFIX="/usr/local"
       ODYSSEY_REPOSITORY="${ODYSSEY_PREFIX}/odyssey"
-    fi
     ODYSSEY_CACHE="${HOME}/Library/Caches/Odyssey"
 
     STAT_PRINTF=("/usr/bin/stat" "-f")

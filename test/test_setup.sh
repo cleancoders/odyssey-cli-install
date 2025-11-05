@@ -165,8 +165,8 @@ test_setup_paths_sets_macos_prefix_for_arm64() {
 
   setup_paths
 
-  assertEquals "should set /opt/odyssey prefix for ARM macOS" "/opt/odyssey" "${ODYSSEY_PREFIX}"
-  assertEquals "should set repository to prefix on ARM macOS" "/opt/odyssey" "${ODYSSEY_REPOSITORY}"
+  assertEquals "should set /usr/local prefix for ARM macOS" "/usr/local" "${ODYSSEY_PREFIX}"
+  assertEquals "should set repository to prefix on ARM macOS" "/usr/local/odyssey" "${ODYSSEY_REPOSITORY}"
 }
 
 test_setup_paths_sets_macos_prefix_for_intel() {

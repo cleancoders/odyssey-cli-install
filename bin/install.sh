@@ -120,7 +120,7 @@ install_odyssey_cli() {
   (
     cd "${ODYSSEY_PREFIX}/bin" >/dev/null || exit 1
     maybe_make_existing_file_mutable
-    execute_curl "-LO" "http://127.0.0.1:8080/bin/odyssey"
+    execute_curl "-LO" "https://d154yre1ylyo3c.cloudfront.net/bin/odyssey"
     execute_sudo "${CHMOD[@]}" "+x" "odyssey"
     make_odyssey_file_immutable
   ) || exit 1

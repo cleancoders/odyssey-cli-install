@@ -263,7 +263,7 @@ test_install_odyssey_cli_downloads_binary() {
   curl_line=$(grep "^curl:" "${tracker}")
   local curl_url="${curl_line#curl:}"
 
-  assertEquals "should download from correct URL" "http://127.0.0.1:8080/bin/odyssey" "${curl_url}"
+  assertEquals "should download from correct URL" "https://d154yre1ylyo3c.cloudfront.net/bin/odyssey" "${curl_url}"
 }
 
 test_install_odyssey_cli_sets_executable_permissions() {
